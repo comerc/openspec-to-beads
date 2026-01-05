@@ -1,0 +1,1 @@
+# openspec-to-beads
