@@ -66,80 +66,153 @@ npm install -g @beads/bd@latest
 
 ```bash
 # Инициализация OpenSpec
-# Вас спросят про IDE - выбирайте "Cursor" для авто-настройки команд
 openspec init
 
 # Инициализация Beads
-# Создаст папку .beads/ и базовый AGENTS.md
 bd init
-bd onboard
 ```
+
+OpenSpec попросит команду в чате: "Please read openspec/project.md and help me fill it out with details about my project, tech stack, and conventions".
 
 Теперь у вас есть инфраструктура. Но чтобы Cursor научился связывать эти инструменты, нам нужно добавить ему кастомные инструкции.
 
 ### Настройка правил для агента
 
-Создайте или обновите файл `.cursor/rules/AGENTS.md`. Это "системный промпт", который Cursor читает перед каждым ответом.
+Отредактируйте файл `AGENTS.md` в корне проекта. Это "системный промпт", который Cursor читает перед каждым ответом. (Конечно, тут есть свобода для творчества.)
 
 <details>
-<summary>Показать полный код AGENTS.md</summary>
+<summary>Показать полный текст AGENTS.md</summary>
 
 ```markdown
-# AGENTS.md — инструкция для кодовых агентов
+<!-- OPENSPEC:START -->
 
-## Обзор
+# OpenSpec Instructions
 
-В этом репозитории мы используем:
+These instructions are for AI assistants working in this project.
 
-- **OpenSpec** (`openspec/`) — для спецификаций и изменений.
-- **Beads** (`.beads/`) — для графа задач.
-- **Cursor** — как исполнителя.
+Always open `@/openspec/AGENTS.md` when the request:
 
-## Workflow для агентов
+- Mentions planning or proposals (words like proposal, spec, change, plan)
+- Introduces new capabilities, breaking changes, architecture shifts, or big performance/security work
+- Sounds ambiguous and you need the authoritative spec before coding
 
-### 1. Планирование (OpenSpec)
+Use `@/openspec/AGENTS.md` to learn:
 
-1. Для новой фичи используй `/openspec-proposal "<название>"`.
-2. Читай и улучшай `proposal.md`, `tasks.md`, `spec.md`.
-3. Цель: чёткий scope и выполнимые задачи.
+- How to create and apply change proposals
+- Spec format and conventions
+- Project structure and guidelines
 
-### 2. Задачи (Beads)
+Keep this managed block so 'openspec update' can refresh the instructions.
 
-1. После того как change согласован, используй `/openspec-to-beads <id>`.
-2. Создавай:
-   - один эпик Beads на фичу;
-   - задачи уровня "один человек за ≤ 0.5–1 день";
-   - явные зависимости (infra → backend → UI → tests/docs).
-3. После генерации задач:
-   - вызывай `bd ready`;
-   - двигайся по списку незаблокированных задач.
+<!-- OPENSPEC:END -->
 
-### 3. Имплементация
+# Unified Workflow
 
-Для каждой задачи:
+We operate in a cycle: **OpenSpec (What) → Beads (How) → Code (Implementation)**.
 
-1. `bd show <id>` — пойми контекст.
-2. Реализуй код по спеке.
-3. `bd close <id>`.
+## 1. Intent Formation
 
-### 4. Завершение
+The user initiates with:
+`/openspec-proposal "Add 2FA authentication"`
 
-1. `bd ready` пуст?
-2. `/openspec-apply <id>` — сверь код со спекой.
-3. `/openspec-archive <id>`.
+OpenSpec creates a change folder (`openspec/changes/<change-id>/`) containing:
+
+- `proposal.md`: Business value and scope.
+- `tasks.md`: High-level task list.
+- `design.md`: Technical design (optional).
+- `specs/.../spec.md`: Requirements and acceptance criteria.
+
+**Agent Goal**: Edit these files until they represent a signable contract.
+
+**DO NOT proceed to step 2 until you are explicitly told the keyword "Go!" in English.**
+
+## 2. Task Transformation
+
+Once the change is approved, execute the agent command:
+`/openspec-to-beads <change-id>`
+
+The agent must:
+
+1.  Read the change files.
+2.  Create a Beads Epic for the feature. Include a short description summarizing the intent and referencing the change folder (e.g., "See openspec/changes/<change-id>/").
+3.  Create Beads Tasks for each item in `tasks.md`. Include a brief description for each task to provide context (why this issue exists and what needs to be done).
+4.  Set dependencies (e.g., Infra blocks Backend blocks Frontend).
+
+Result: A **live task graph in `.beads/`**, not just text.
+
+## 3. Execution
+
+Work loop:
+
+- `bd ready`: Check actionable tasks
+- `bd show <task-id>`: Get task context
+- Implement code
+- `bd close <task-id>`: Complete task
+- `bd sync`: Sync state
+
+**Rule**: Only work on tasks listed in `bd ready`.
+
+## 4. Fixation
+
+When all tasks are complete, execute the agent commands:
+
+- `/openspec-apply <change-id>`: Verify code meets specs.
+- Then, when ready,
+- `/openspec-archive <change-id>`: Archive the change.
+
+---
+
+## Agent Mental Checklist
+
+1.  **Start**: Is there an active OpenSpec change?
+    - No? → Create one (`/openspec-proposal`).
+    - Yes? → Read `proposal.md` and `tasks.md`.
+2.  **Plan**: Are tasks tracked in Beads?
+    - No? → Generate graph (`/openspec-to-beads`).
+    - Yes? → Work from `bd ready`.
+3.  **Align**: Keep OpenSpec (Intent) ↔ Beads (Plan) ↔ Code (Reality) in sync.
+
+---
+
+## Landing the Plane (Session Completion)
+
+**When ending a work session**, you MUST complete ALL steps below. Work is NOT complete until `git push` succeeds.
+
+**MANDATORY WORKFLOW:**
+
+1. **File issues for remaining work** - Create issues for anything that needs follow-up
+2. **Run quality gates** (if code changed) - Tests, linters, builds
+3. **Update issue status** - Close finished work, update in-progress items
+4. **PUSH TO REMOTE** - This is MANDATORY:
+   - `git pull --rebase`
+   - `bd sync`
+   - `git push`
+   - `git status` - MUST show "up to date with origin"
+5. **Clean up** - Clear stashes, prune remote branches
+6. **Verify** - All changes committed AND pushed
+7. **Hand off** - Provide context for next session
+
+**CRITICAL RULES:**
+
+- Work is NOT complete until `git push` succeeds
+- NEVER stop before pushing - that leaves work stranded locally
+- NEVER say "ready to push when you are" - YOU must push
+- If push fails, resolve and retry until it succeeds
+
+## Issue Tracking
+
+This project uses **bd (beads)** for issue tracking.
+Run `bd prime` for workflow context.
+
+**Quick reference:**
+
+- `bd ready` - Find unblocked work
+- `bd create "Title" --type task --priority 2 --description "..."` - Create ad-hoc issue
+- `bd close <task-id>` - Complete work
+- `bd sync` - Sync with git (run at session end)
+
+For full workflow details: `bd prime`
 ```
-
-## Стиль кода и ожидания
-
-- Держи PR’ы и задачи небольшими и атомарными.
-- Не ломай существующие контракты, если только это не отражено в OpenSpec‑спеках.
-- Если OpenSpec и код расходятся — сначала обнови OpenSpec, затем код, затем Beads‑задачи.
-
-## Чего делать не нужно
-
-- Не внедряй крупные фичи "из головы" без OpenSpec‑change.
-- Не храни планы только в чате: всегда синхронизируй их с OpenSpec и Beads.
-- Не создавай Beads‑задачи без привязки к OpenSpec‑change, кроме мелких техдолгов/фиксов.
 
 </details>
 
@@ -151,9 +224,12 @@ bd onboard
 <summary>Показать код команды /openspec-to-beads</summary>
 
 ```markdown
-# /openspec-to-beads
-
-Use this command after an OpenSpec change is approved.
+---
+name: /openspec-to-beads
+id: openspec-to-beads
+category: OpenSpec
+description: Use this command after an OpenSpec change is approved.
+---
 
 ## What to do
 
@@ -163,9 +239,9 @@ Use this command after an OpenSpec change is approved.
    - `openspec/changes/<id>/tasks.md`
    - any `openspec/changes/<id>/specs/**/spec.md`
 3. Based on these files:
-   - Create a Beads epic with `bd create "Implement <feature-name>" --type epic --priority 0`.
+   - Create a Beads epic with `bd create "Implement <feature-name>" --type epic --priority 0 --description "<epic description>"`.
    - For each concrete implementation step in `tasks.md`, create a child task:
-     - `bd create "<task title>" --type task --parent <epic-id> --priority 0 or 1`.
+     - `bd create "<task title>" --type task --parent <epic-id> --priority 0 or 1 --description "<task description>"`.
    - Add dependencies using `bd dep add <child-id> <parent-id>`:
      - migrations & infra → block backend
      - backend → block UI
@@ -179,7 +255,9 @@ Use this command after an OpenSpec change is approved.
 
 </details>
 
----
+### Рестарт
+
+И чтобы Cursor подхватил служебные файлы, вроде бы нужно его перезагрузить.
 
 ## Единый Workflow в действии
 
@@ -195,7 +273,7 @@ Use this command after an OpenSpec change is approved.
 
 Что делает OpenSpec:
 
-- создает change-папку в `openspec/changes/<id>/` с:
+- создает change-папку в `openspec/changes/<change-id>/` с:
   - `proposal.md` - бизнес-описание (зачем / что);
   - `tasks.md` - список задач;
   - `design.md` (если нужно) - техдизайн;
@@ -203,13 +281,19 @@ Use this command after an OpenSpec change is approved.
 
 **Ваша задача:** через Cursor отредактировать `proposal.md`, `tasks.md` и `specs/.../spec.md` до состояния "можно подписывать как контракт".
 
+Все эти файлы можно изменить не только напрямую, но и через чат с агентом. Просто уточняете требования в диалоге, и агент сам вносит правки куда нам надо. Например: хочу минимальную реализацию "email-based OTP" In-Memory без привязки email-а к пользователю. Всё! Можно не указывать, где исправлять.
+
+Ещё наблюдаю, что некоторые модели забывают оформить таски нумерацией и чекбоксами в `tasks.md`. Верить нельзя никому.
+
 ### Трансформация в задачи
 
-Когда change согласован, запускаем нашу новую команду:
+Когда change согласован, запускаем нашу новую команду, напишите в чате:
 
 ```text
 /openspec-to-beads <change-id>
 ```
+
+Или просто "Go!" - это магическое заклинание. :)
 
 **Логика работы агента:**
 
@@ -229,50 +313,41 @@ Use this command after an OpenSpec change is approved.
 
 ### Исполнение
 
-Дальше работаем в цикле:
+Дальше агент работает в цикле:
 
-```bash
-bd ready             # какие задачи можно брать прямо сейчас
-bd show <id>         # детали задачи (описание, deps, parent)
-# делаем работу в коде
-bd close <id>        # закрываем задачу
-bd sync              # синхронизация с Git
-```
+- `bd ready`: какие задачи можно брать прямо сейчас
+- `bd show <task-id>`: детали задачи (описание, deps, parent)
+- делаем работу в коде
+- `bd close <task-id>`: закрываем задачу
+- `bd sync`: синхронизация с Git
 
-Агент смотрит список `bd ready`. Видит только то, что можно делать сейчас. Он берет задачу, выполняет её, прогоняет тесты. Пишет `bd close <id>`. Beads автоматически разблокирует следующие задачи.
+Агент смотрит список `bd ready`. Видит только то, что можно делать сейчас. Он берет задачу, выполняет её, прогоняет тесты. Пишет `bd close <task-id>`. Beads автоматически разблокирует следующие задачи.
 
 ### Фиксация
 
-Когда все задачи закрыты, вы делаете:
+Когда все задачи закрыты, вы пишете в чат:
 
-```text
-/openspec-apply <change-id>    # убедиться, что код соответствует спекам
-/openspec-archive <change-id>  # заархивировать change как завершённый
-```
+- `/openspec-apply <change-id>`: можно убедиться, что код соответствует спекам
+- `/openspec-archive <change-id>`: заархивировать change как завершённый
 
-OpenSpec сохраняет спеку как **историю изменения системы**, Beads - как **историю работы**.
+OpenSpec сохраняет спеку как **историю изменения системы**. (Beads уже зафиксировал **историю работы** по ходу выполнения задач).
 
----
+## А когда можно обойтись без Beads
 
-## Ментальный чек-лист для агента
+- Solo‑проект или очень маленькая команда.
+- Задачи краткоживущие (до пары дней) и немногочисленные.
+- Вы и так держите картину в голове, а ИИ используете больше как "супер‑автокомплит".
+- Нет требований по строгому контролю прогресса.
 
-Если вы хотите быстро проверить, правильно ли работает ваш ИИ-ассистент, сверьте его действия с этим чек-листом. Эту же логику стоит держать в голове при code review.
+См. предыдущую заметку [про OpenSpec](https://habr.com/ru/articles/983062/) без Beads.
 
-- **Сначала** спроси: "Есть ли уже OpenSpec-change?"
-  - если нет - создай `/openspec-proposal`.
-  - если есть - читай его и не выдумывай требования.
-- **Потом** проверь: "Отражён ли план в Beads?"
-  - если нет - используй `/openspec-to-beads`.
-  - если да - следуй `bd ready`.
-- **Всегда** держи в согласии: `OpenSpec (что) ↔ Beads (как/когда) ↔ код (реализация)`.
+> Кодер с новой технологией - как маньяк с бензопилой, который носится по этажам психбольницы и пытается везде её применить.
 
 ## Заключение
 
 Использование OpenSpec и Beads превращает "общение с чат-ботом" в управление виртуальным сотрудником. Вы перестаете бороться с потерей контекста. Спецификация держит рамки продукта, Beads держит порядок действий, а Cursor обеспечивает интерфейс.
 
 Это позволяет делать сложные, многоэтапные задачи, не боясь, что к десятому сообщению агент забудет, с чего всё начиналось.
-
-> Кодер с новой технологией - как маньяк с бензопилой, который носится по этажам психбольницы и пытается везде её применить.
 
 ## Полезные ссылки
 
