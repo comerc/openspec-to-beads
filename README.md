@@ -355,8 +355,9 @@ OpenSpec сохраняет спеку как **историю изменени�
 
 ## Полезные ссылки
 
-1.  [OpenSpec + Cursor Forum Discussion](https://forum.cursor.com/t/openspec-lightweight-portable-spec-driven-framework-for-ai-coding-assistants/134052)
-2.  [OpenSpec GitHub](https://github.com/Fission-AI/OpenSpec)
-3.  [Beads GitHub](https://github.com/steveyegge/beads)
-4.  [Beads Best Practices (Steve Yegge)](https://steve-yegge.medium.com/beads-best-practices-2db636b9760c)
-5.  [AGENTS.md Specification](https://agents.md/)
+0. [Demo](https://github.com/comerc/round-squares/tree/2FA-3)
+1. [OpenSpec + Cursor Forum Discussion](https://forum.cursor.com/t/openspec-lightweight-portable-spec-driven-framework-for-ai-coding-assistants/134052)
+2. [OpenSpec GitHub](https://github.com/Fission-AI/OpenSpec)
+3. [Beads GitHub](https://github.com/steveyegge/beads)
+4. [Beads Best Practices (Steve Yegge)](https://steve-yegge.medium.com/beads-best-practices-2db636b9760c)
+5. [AGENTS.md Specification](https://agents.md/)
